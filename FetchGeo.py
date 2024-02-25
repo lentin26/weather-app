@@ -7,13 +7,14 @@ class FetchGeo:
         self.data = pd.read_csv(data_loc)
 
     def get_lat_long(self, us_city):
-        """Read data from weather API, transform, write to Redis
+        """Read data locally, lookup latitude, longitude of united states city
 
         Args:
             us_city (str): The name of the city.
 
         Returns:
-            json: Actor details and other films they have acted in, along with the source and time taken.
+            lat (float): latitude of united states city
+            long (float): longitude of united states city
         """
         # get lat and long coordinates
         lat, long = self.data.loc[
