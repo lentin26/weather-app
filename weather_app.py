@@ -1,13 +1,10 @@
 from flask import Flask, jsonify
-# import pymysql
-# import redis
 import time
 import json
 from FetchGeo import FetchGeo
 from db_config import get_redis_connection
 from flask_restx import Api, Resource, fields
 import requests
-
 from dotenv import load_dotenv
 import os
 
@@ -56,10 +53,6 @@ class WeatherForecast(Resource):
         city_key = f"city:{us_city}"
         city_data = redis_conn.hgetall(city_key)
 
-        # if not in cache go to API
-        # if cached_data:
-        #     actors_data = json.loads(cached_data)
-        #     source = "Redis"
         if not city_data:
             # get lat and long coordinates
             lat, long = fetcher.get_lat_long(us_city)
@@ -70,9 +63,11 @@ class WeatherForecast(Resource):
 
             r = requests.get(URL)
             city_data = r.json()
+
             if city_data:
                 # write data to redis
-                redis_conn.hmset(city_key, city_data)
+                redis_conn.hset("city:northampton", "data", json.dumps(r.json()))
+                # redis_conn.hmset(city_key, json.dumps(city_data))
                 redis_conn.expire(city_key, 3600)  # Cache for 3600 secs
                 source = "WeatherAPI"
             else:
@@ -80,11 +75,14 @@ class WeatherForecast(Resource):
         else:
             source = "Redis"
 
-        redis_conn.incr(f"film_views:{us_city}")
+        redis_conn.incr(f"city_views:{us_city}")
 
         end = time.time()
         time_taken = end - start
-        return jsonify({"city": us_city, "source": source, "time_taken": time_taken, "data": city_data})
+
+        data = json.loads(city_data["data"])
+        return jsonify({"city": us_city, "source": source, "time_taken": time_taken, "data": data})
+
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8000, debug=True)
