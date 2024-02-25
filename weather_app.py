@@ -3,6 +3,7 @@ from flask import Flask, jsonify
 # import redis
 import time
 import json
+from FetchGeo import FetchGeo
 from db_config import get_redis_connection, get_mysql_connection
 from flask_restx import Api, Resource, fields
 import requests
@@ -36,10 +37,10 @@ weather_api = api.model(
 # Establish database connections
 redis_conn = get_redis_connection()
 
-@api.route("/weather/", methods=["GET"])
-class WeatherTomorrow(Resource):
+@api.route("/weatherforecast/<str:us_city>", methods=["GET"])
+class WeatherForecast(Resource):
     @api.doc(model=[weather_api])
-    def get():
+    def get(us_city):
         """Read data from weather API, transform, write to Redis
 
         Args:
@@ -48,13 +49,26 @@ class WeatherTomorrow(Resource):
         Returns:
             json: Actor details and other films they have acted in, along with the source and time taken.
         """
-
-        city_key = f"film:{film_id}"
+        # check cache
+        city_key = f"film:{us_city}"
         lat, long = redis_conn.hgetall(city_key)
 
+        # if not in cache go to API
         if not city_key:
+            # get lat and long coordinates
+            lat, long = FetchGeo(city_key)
+
+            # format url with city latitude and longitude
             URL = 'https://api.tomorrow.io/v4/weather/forecast?location={lat},{long}&apikey={WEATHER_API_KEY}'\
                 .format(lat=lat, long=long, WEATHER_API_KEY=WEATHER_API_KEY)
 
             r = requests.get(URL)
+            city_data = r.json()
+
+            # write data to redis
+            redis_conn.hmset(city_key, city_data)
+            redis_conn.expire(city_key, 3600)  # Cache for 3600 secs
+            city = city_data
+            source = "WeatherAPI"
+
         return r.json()
