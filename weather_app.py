@@ -46,7 +46,7 @@ class WeatherForecast(Resource):
             us_city (str): The name of the city.
 
         Returns:
-            json: Actor details and other films they have acted in, along with the source and time taken.
+            json: forecast data associated with us city.
         """
         start = time.time()
         # check cache
