@@ -40,7 +40,7 @@ def get_redis_connection():
     return redis.Redis(
         host=config["redis"]["host"],
         port=config["redis"]["port"],
-        db=0,
+        # db=0,
         decode_responses=True,
         username=config["redis"]["user"],
         password=config["redis"]["password"],
